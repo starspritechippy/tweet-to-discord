@@ -16,21 +16,22 @@ log.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 # create a Formatter, this contains the log message format and date format
 formatter = logging.Formatter(
-    "[%(loglevel)s] [%(asctime)s] %(message)s",
+    "[%(levelname)s] [%(asctime)s] %(message)s",
     "%d/%m/%Y %H:%M:%S",
 )
 # add the formatter to the handler
 handler.setFormatter(formatter)
 # add the handler to the Logger
 log.addHandler(handler)
-log.info("Started")
-load_dotenv()
 
+load_dotenv()
+log.debug("Loaded variables from .env")
 
 auth = tweepy.OAuthHandler(os.environ["API_KEY"], os.environ["API_SECRET"])
 auth.set_access_token(os.environ["USER_TOKEN"], os.environ["USER_SECRET"])
 
 api = tweepy.API(auth)
+log.debug("Authorized with Twitter")
 
 user = api.get_user(int(os.environ["USER_ID"]))
 log.debug("User %s (%s) retrieved", user.name, user.screen_name)
@@ -39,7 +40,6 @@ log.debug("User %s (%s) retrieved", user.name, user.screen_name)
 # repeat every 30 minutes from here
 while True:
     tl = user.timeline()
-
     log.debug("User timeline retrieved")
 
     for tweet in tl:
@@ -70,12 +70,11 @@ while True:
         tweet_url = (
             f"https://twitter.com/{tweet.author.screen_name}/status/{tweet.id_str}"
         )
-        log.debug("Posting %s to discord...", tweet_url)
         requests.post(
             os.environ["WEBHOOK_URL"],
             json={"content": tweet_url},
         )
-        log.debug("Successfully posted!")
+        log.debug("Successfully posted %s to discord!", tweet_url)
 
     time.sleep(60 * 30)
     # wait 30 mins to check for the next update, that seems reasonable
