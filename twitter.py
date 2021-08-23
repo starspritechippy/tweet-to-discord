@@ -40,17 +40,22 @@ log.debug("User %s (%s) retrieved", user.name, user.screen_name)
 # repeat every 30 minutes from here
 while True:
     tl = user.timeline()
+    tl.reverse()
     log.debug("User timeline retrieved")
 
     for tweet in tl:
         tweet: tweepy.Status
-        # tweets are ordered by time, most recent ones first
+        # tweets are ordered by time, oldest ones first
 
         if tweet.id <= int(os.environ["LAST_STATUS_ID"]):
             # first tweet on tl is the same as before
             # could also be a rt
-            log.debug("Tweets are stale")
-            break
+            log.debug(
+                "Tweet with ID %s is older than latest retrieved %s",
+                tweet.id_str,
+                os.environ["LAST_STATUS_ID"],
+            )
+            continue
 
         # tweet is newer than the last one, set new ID
         os.environ["LAST_STATUS_ID"] = tweet.id_str
@@ -58,13 +63,13 @@ while True:
         log.debug("last_status_id updated to %s", tweet.id_str)
         if tweet.author.id != int(os.environ["USER_ID"]):
             # this is a retweet from someone else, ignore
-            log.debug("Tweet is not by specified user")
-            break
+            log.debug("Tweet %s is not by specified user", tweet.id_str)
+            continue
 
         if tweet.in_reply_to_status_id:
             # tweet is a reply tweet, ignore
-            log.debug("Tweet is a reply post")
-            break
+            log.debug("Tweet %s is a reply post", tweet.id_str)
+            continue
 
         # tweet is a new status, not a rt or reply, now post
         tweet_url = (
